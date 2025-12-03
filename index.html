@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOMASH AI | Quantum Cyber Command</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+        }
+
+        body {
+            background: #000;
+            color: #0ff;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Matrix Rain Background */
+        .matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -2;
+            opacity: 0.3;
+        }
+
+        /* Scanning Lines */
+        .scan-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                rgba(0, 255, 255, 0.03) 51%
+            );
+            background-size: 100% 4px;
+            animation: scanMove 10s linear infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Holographic Grid */
+        .hologrid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridPulse 20s infinite linear;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Main Container */
+        .cyber-terminal {
+            display: grid;
+            grid-template-columns: 300px 1fr 400px;
+            grid-template-rows: 80px 1fr 200px;
+            height: 100vh;
+            gap: 0;
+            position: relative;
+        }
+
+        /* Header - Always Visible */
+        .cyber-header {
+            grid-column: 1 / -1;
+            background: linear-gradient(90deg, #000, #111, #000);
+            border-bottom: 2px solid #0ff;
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            box-shadow: 0 0 50px #0ff;
+            z-index: 100;
+        }
+
+        .cyber-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(0, 255, 255, 0.1), 
+                transparent);
+            animation: headerScan 4s linear infinite;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-icon {
+            font-size: 2.5em;
+            color: #0ff;
+            text-shadow: 
+                0 0 10px #0ff,
+                0 0 20px #0ff,
+                0 0 30px #0ff;
+            animation: logoGlow 2s infinite alternate;
+        }
+
+        .logo-text {
+            font-size: 2em;
+            font-weight: bold;
+            letter-spacing: 3px;
+            background: linear-gradient(45deg, #0ff, #f0f, #0ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            animation: textFlow 3s infinite linear;
+        }
+
+        .system-status {
+            display: flex;
+            gap: 30px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #0f0;
+            box-shadow: 0 0 10px #0f0;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.warning { background: #ff0; box-shadow: 0 0 10px #ff0; }
+        .status-dot.danger { background: #f00; box-shadow: 0 0 10px #f00; }
+
+        /* Left Panel - Navigation */
+        .nav-panel {
+            background: rgba(0, 20, 30, 0.9);
+            border-right: 1px solid #0ff;
+            padding: 30px 0;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            padding: 0 30px 30px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .nav-title {
+            color: #0ff;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px #0ff;
+        }
+
+        .cyber-btn {
+            width: 100%;
+            padding: 15px;
+            margin: 8px 0;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .cyber-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: #0ff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            transform: translateX(5px);
+        }
+
+        .cyber-btn.active {
+            background: rgba(0, 255, 255, 0.4);
+            border-color: #0ff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.7);
+            animation: btnPulse 1s infinite alternate;
+        }
+
+        .btn-icon {
+            width: 30px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+
+        .btn-badge {
+            margin-left: auto;
+            background: #f00;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            animation: badgePulse 1s infinite;
+        }
+
+        /* Main Content - Dynamic Panel */
+        .main-panel {
+            background: rgba(0, 10, 20, 0.95);
+            padding: 30px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Right Panel - Monitoring */
+        .monitor-panel {
+            background: rgba(0, 30, 30, 0.9);
+            border-left: 1px solid #0ff;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .monitor-card {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 5px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .monitor-card:hover {
+            border-color: #0ff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .monitor-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+            margin: 10px 0;
+        }
+
+        /* Console Output */
+        .console-output {
+            background: #000;
+            border: 1px solid #0ff;
+            border-radius: 5px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            height: 150px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .console-line {
+            margin-bottom: 5px;
+            animation: typewriter 0.1s steps(40) forwards;
+            opacity: 0;
+        }
+
+        .console-command { color: #0ff; }
+        .console-success { color: #0f0; }
+        .console-warning { color: #ff0; }
+        .console-error { color: #f00; }
+        .console-hack { color: #f0f; }
+
+        /* Footer - System Controls */
+        .cyber-footer {
+            grid-column: 1 / -1;
+            background: rgba(0, 20, 30, 0.9);
+            border-top: 1px solid #0ff;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .system-controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .control-btn {
+            padding: 10px 25px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #0ff;
+            color: #0ff;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 20px #0ff;
+            transform: scale(1.05);
+        }
+
+        .control-btn.danger {
+            border-color: #f00;
+            color: #f00;
+        }
+
+        .control-btn.danger:hover {
+            background: rgba(255, 0, 0, 0.3);
+            box-shadow: 0 0 20px #f00;
+        }
+
+        /* Camera Interface */
+        .camera-interface {
+            position: relative;
+            height: 400px;
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            background: #000;
+        }
+
+        #videoFeed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .detection-box {
+            position: absolute;
+            border: 2px solid;
+            background: rgba(0, 255, 255, 0.1);
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: boxPulse 2s infinite;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        /* Hacking Interface */
+        .hacking-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .hack-module {
+            background: rgba(255, 0, 255, 0.1);
+            border: 1px solid #f0f;
+            border-radius: 5px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .hack-module:hover {
+            background: rgba(255, 0, 255, 0.3);
+            border-color: #f0f;
+            box-shadow: 0 0 30px #f0f;
+            transform: scale(1.05);
+        }
+
+        .hack-icon {
+            font-size: 2.5em;
+            color: #f0f;
+            margin-bottom: 10px;
+        }
+
+        /* Data Visualization */
+        .data-vis {
+            height: 300px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Neural Network Visualization */
+        .neural-viz {
+            height: 300px;
+            border: 1px solid #0ff;
+            margin: 20px 0;
+            background: rgba(0, 10, 20, 0.9);
+            position: relative;
+        }
+
+        #neuralCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* AI Simulation */
+        .simulation-window {
+            height: 400px;
+            border: 1px solid #0ff;
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Quantum Computing Display */
+        .quantum-display {
+            height: 300px;
+            background: linear-gradient(45deg, #000, #001, #003);
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Alert System */
+        .alert-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.1);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: alertPulse 0.5s infinite alternate;
+        }
+
+        .alert-box {
+            background: #000;
+            border: 3px solid #f00;
+            padding: 40px;
+            max-width: 600px;
+            text-align: center;
+            animation: alertBoxPulse 1s infinite alternate;
+        }
+
+        /* Progress Bars */
+        .cyber-progress {
+            height: 20px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #0ff;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0ff, #00f);
+            width: 0%;
+            transition: width 0.5s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.3), 
+                transparent);
+            animation: progressShine 2s infinite;
+        }
+
+        /* Toggle Switches */
+        .cyber-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .cyber-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 255, 255, 0.2);
+            border: 1px solid #0ff;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 3px;
+            background-color: #0ff;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #0ff;
+        }
+
+        input:checked + .switch-slider {
+            background-color: rgba(0, 255, 255, 0.4);
+        }
+
+        input:checked + .switch-slider:before {
+            transform: translateX(28px);
+            background-color: #f0f;
+            box-shadow: 0 0 10px #f0f;
+        }
+
+        /* Animations */
+        @keyframes scanMove {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        @keyframes gridPulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { opacity: 0.3; }
+        }
+
+        @keyframes headerScan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @keyframes logoGlow {
+            0% { text-shadow: 0 0 10px #0ff; }
+            100% { text-shadow: 0 0 30px #0ff, 0 0 40px #0ff; }
+        }
+
+        @keyframes textFlow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+
+        @keyframes btnPulse {
+            0% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+            100% { box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); }
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes typewriter {
+            from { width: 0; opacity: 1; }
+            to { width: 100%; opacity: 1; }
+        }
+
+        @keyframes boxPulse {
+            0%, 100% { box-shadow: 0 0 5px currentColor; }
+            50% { box-shadow: 0 0 20px currentColor; }
+        }
+
+        @keyframes alertPulse {
+            0% { background-color: rgba(255, 0, 0, 0.1); }
+            100% { background-color: rgba(255, 0, 0, 0.3); }
+        }
+
+        @keyframes alertBoxPulse {
+            0% { box-shadow: 0 0 20px #f00; }
+            100% { box-shadow: 0 0 50px #f00; }
+        }
+
+        @keyframes progressShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1600px) {
+            .cyber-terminal {
+                grid-template-columns: 250px 1fr 350px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .cyber-terminal {
+                grid-template-columns: 200px 1fr;
+                grid-template-rows: 80px 1fr 200px;
+            }
+            .monitor-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .cyber-terminal {
+                grid-template-columns: 1fr;
+                grid-template-rows: 80px 1fr 200px;
+            }
+            .nav-panel {
+                display: none;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0ff;
+            border-radius: 4px;
+            box-shadow: 0 0 10px #0ff;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0af;
+        }
+
+        /* Terminal Cursor */
+        .terminal-cursor::after {
+            content: '▋';
+            animation: cursorBlink 1s infinite;
+        }
+
+        @keyframes cursorBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Matrix Rain Background -->
+    <canvas id="matrixRain" class="matrix-rain"></canvas>
+    <div class="scan-lines"></div>
+    <div class="hologrid"></div>
+
+    <!-- Alert Overlay -->
+    <div class="alert-overlay" id="alertOverlay">
+        <div class="alert-box">
+            <h2 style="color: #f00; margin-bottom: 20px; text-shadow: 0 0 10px #f00;">
+                <i class="fas fa-exclamation-triangle"></i> SECURITY BREACH DETECTED
+            </h2>
+            <p id="alertMessage" style="color: #fff; margin-bottom: 30px;">
+                Unauthorized access attempt detected in mainframe!
+            </p>
+            <div style="display: flex; gap: 20px; justify-content: center;">
+                <button class="control-btn" onclick="handleAlert('neutralize')">
+                    <i class="fas fa-shield-alt"></i> NEUTRALIZE THREAT
+                </button>
+                <button class="control-btn danger" onclick="handleAlert('lockdown')">
+                    <i class="fas fa-lock"></i> INITIATE LOCKDOWN
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Cyber Terminal -->
+    <div class="cyber-terminal">
+        <!-- Header -->
+        <header class="cyber-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-brain-circuit"></i>
+                </div>
+                <div class="logo-text">
+                    LOMASH QUANTUM AI
+                </div>
+            </div>
+            
+            <div class="system-status">
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span>SYSTEM: ONLINE</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot warning"></div>
+                    <span>THREATS: 3</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span>AI: 97.8%</span>
+                </div>
+                <div class="status-item">
+                    <div id="timeDisplay" style="color: #0ff; font-family: 'Courier New', monospace;">
+                        00:00:00
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Panel -->
+        <nav class="nav-panel">
+            <div class="nav-section">
+                <h3 class="nav-title">SYSTEM CONTROL</h3>
+                <button class="cyber-btn active" data-section="dashboard">
+                    <span class="btn-icon"><i class="fas fa-tachometer-alt"></i></span>
+                    <span>DASHBOARD</span>
+                </button>
+                <button class="cyber-btn" data-section="camera">
+                    <span class="btn-icon"><i class="fas fa-eye"></i></span>
+                    <span>OBJECT DETECTION</span>
+                    <span class="btn-badge">LIVE</span>
+                </button>
+                <button class="cyber-btn" data-section="hacking">
+                    <span class="btn-icon"><i class="fas fa-user-secret"></i></span>
+                    <span>CYBER ATTACK</span>
+                    <span class="btn-badge">3</span>
+                </button>
+            </div>
+
+            <div class="nav-section">
+                <h3 class="nav-title">AI SYSTEMS</h3>
+                <button class="cyber-btn" data-section="neural">
+                    <span class="btn-icon"><i class="fas fa-network-wired"></i></span>
+                    <span>NEURAL NETWORK</span>
+                </button>
+                <button class="cyber-btn" data-section="quantum">
+                    <span class="btn-icon"><i class="fas fa-atom"></i></span>
+                    <span>QUANTUM PROCESSOR</span>
+                </button>
+                <button class="cyber-btn" data-section="simulation">
+                    <span class="btn-icon"><i class="fas fa-brain"></i></span>
+                    <span>AI SIMULATION</span>
+                </button>
+            </div>
+
+            <div class="nav-section">
+                <h3 class="nav-title">SECURITY</h3>
+                <button class="cyber-btn" data-section="firewall">
+                    <span class="btn-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span>FIREWALL</span>
+                </button>
+                <button class="cyber-btn" data-section="monitor">
+                    <span class="btn-icon"><i class="fas fa-binoculars"></i></span>
+                    <span>NETWORK MONITOR</span>
+                </button>
+                <button class="cyber-btn" data-section="encryption">
+                    <span class="btn-icon"><i class="fas fa-lock"></i></span>
+                    <span>ENCRYPTION</span>
+                </button>
+            </div>
+
+            <div class="nav-section">
+                <h3 class="nav-title">DATA ANALYSIS</h3>
+                <button class="cyber-btn" data-section="analytics">
+                    <span class="btn-icon"><i class="fas fa-chart-line"></i></span>
+                    <span>ANALYTICS</span>
+                </button>
+                <button class="cyber-btn" data-section="visualization">
+                    <span class="btn-icon"><i class="fas fa-project-diagram"></i></span>
+                    <span>3D VISUALIZATION</span>
+                </button>
+                <button class="cyber-btn" data-section="database">
+                    <span class="btn-icon"><i class="fas fa-database"></i></span>
+                    <span>DATABASE</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content Panel -->
+        <main class="main-panel">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section active">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h2 style="color: #0ff; text-shadow: 0 0 10px #0ff;">
+                        QUANTUM DASHBOARD
+                    </h2>
+                    <div style="display: flex; gap: 15px;">
+                        <label class="cyber-switch">
+                            <input type="checkbox" id="autoMode" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                        <span style="color: #0ff;">AUTO MODE</span>
+                    </div>
+                </div>
+
+                <div class="monitor-grid">
+                    <div class="monitor-card">
+                        <div>QUANTUM SPEED</div>
+                        <div class="monitor-value" id="quantumSpeed">5.2 TQ</div>
+                        <div>Operations/Second</div>
+                    </div>
+                    <div class="monitor-card">
+                        <div>SYSTEM LOAD</div>
+                        <div class="monitor-value" id="systemLoad">87%</div>
+                        <div>Processing Capacity</div>
+                    </div>
+                    <div class="monitor-card">
+                        <div>THREAT LEVEL</div>
+                        <div class="monitor-value" id="threatLevel">MEDIUM</div>
+                        <div>Security Status</div>
+                    </div>
+                    <div class="monitor-card">
+                        <div>AI ACCURACY</div>
+                        <div class="monitor-value" id="aiAccuracy">97.8%</div>
+                        <div>Neural Performance</div>
+                    </div>
+                </div>
+
+                <div class="cyber-progress">
+                    <div class="progress-fill" id="dataProgress" style="width: 65%;"></div>
+                </div>
+                <div style="color: #0ff; margin: 10px 0;">DATA PROCESSING: 65%</div>
+
+                <div class="console-output" id="dashboardConsole">
+                    <!-- Console messages appear here -->
+                </div>
+            </section>
+
+            <!-- Camera Section -->
+            <section id="camera" class="content-section">
+                <h2 style="color: #0ff; margin-bottom: 20px; text-shadow: 0 0 10px #0ff;">
+                    <i class="fas fa-eye"></i> OBJECT DETECTION SYSTEM
+                </h2>
+                
+                <div class="camera-interface">
+                    <video id="videoFeed" autoplay playsinline></video>
+                    <div class="camera-overlay" id="cameraOverlay"></div>
+                    <div id="cameraPlaceholder" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #0ff; z-index: 1;">
+                        <div style="font-size: 4em; margin-bottom: 20px;">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <div style="font-size: 1.5em; margin-bottom: 10px;">QUANTUM VISION SYSTEM</div>
+                        <div>Click "ACTIVATE CAMERA" to begin</div>
+                    </div>
+                </div>
+
+                <div class="camera-controls">
+                    <button class="control-btn" id="startCamera">
+                        <i class="fas fa-play"></i> ACTIVATE CAMERA
+                    </button>
+                    <button class="control-btn" id="captureImage" disabled>
+                        <i class="fas fa-camera"></i> CAPTURE IMAGE
+                    </button>
+                    <button class="control-btn" id="stopCamera" disabled>
+                        <i class="fas fa-stop"></i> STOP CAMERA
+                    </button>
+                    <button class="control-btn" id="toggleCamera">
+                        <i class="fas fa-sync-alt"></i> SWITCH CAMERA
+                    </button>
+                </div>
+
+                <div id="detectionResults" style="margin-top: 30px;">
+                    <h3 style="color: #0ff; margin-bottom: 15px;">DETECTED OBJECTS</h3>
+                    <div class="monitor-grid" id="objectGrid">
+                        <!-- Objects appear here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hacking Section -->
+            <section id="hacking" class="content-section">
+                <h2 style="color: #f0f; margin-bottom: 20px; text-shadow: 0 0 10px #f0f;">
+                    <i class="fas fa-user-secret"></i> CYBER ATTACK SIMULATOR
+                </h2>
+
+                <div class="hacking-grid">
+                    <div class="hack-module" onclick="initiateHack('portScan')">
+                        <div class="hack-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div style="color: #f0f; font-weight: bold;">PORT SCANNER</div>
+                        <div style="font-size: 0.9em; color: #ccc;">Scan network ports</div>
+                    </div>
+                    <div class="hack-module" onclick="initiateHack('vulnerability')">
+                        <div class="hack-icon">
+                            <i class="fas fa-bug"></i>
+                        </div>
+                        <div style="color: #f0f; font-weight: bold;">VULNERABILITY SCAN</div>
+                        <div style="font-size: 0.9em; color: #ccc;">Find system weaknesses</div>
+                    </div>
+                    <div class="hack-module" onclick="initiateHack('bruteForce')">
+                        <div class="hack-icon">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        <div style="color: #f0f; font-weight: bold;">BRUTE FORCE</div>
+                        <div style="font-size: 0.9em; color: #ccc;">Password cracking</div>
+                    </div>
+                    <div class="hack-module" onclick="initiateHack('ddos')">
+                        <div class="hack-icon">
+                            <i class="fas fa-broadcast-tower"></i>
+                        </div>
+                        <div style="color: #f0f; font-weight: bold;">DDoS ATTACK</div>
+                        <div style="font-size: 0.9em; color: #ccc;">Overwhelm target</div>
+                    </div>
+                    <div class="hack-module" onclick="initiateHack('sqlInjection')">
+                        <div class="hack-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div style="color: #f0f; font-weight: bold;">SQL INJECTION</div>
+                        <div style="font-size: 0.9em; color: #ccc;">Database exploitation</div>
+                    </div>
+                    <div class="hack-module" onclick="initiateHack('phishing')">
+                        <div class="hack-icon">
+                            <i class="fas fa-fish"></i>
+                        </div>
+                        <div style="color: #f0f; font-weight: bold;">PHISHING SIM</div>
+                        <div style="font-size: 0.9em; color: #ccc;">Social engineering</div>
+                    </div>
+                </div>
+
+                <div class="console-output" id="hackConsole" style="height: 200px; margin-top: 30px;">
+                    <!-- Hacking logs appear here -->
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <h3 style="color: #f0f; margin-bottom: 15px;">ATTACK TARGET</h3>
+                    <div style="display: flex; gap: 20px; align-items: center;">
+                        <input type="text" id="targetIp" 
+                               style="flex: 1; padding: 10px; background: #000; border: 1px solid #f0f; color: #f0f;" 
+                               placeholder="Enter target IP (e.g., 192.168.1.100)">
+                        <button class="control-btn" onclick="setTarget()">
+                            <i class="fas fa-crosshairs"></i> SET TARGET
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Neural Network Section -->
+            <section id="neural" class="content-section">
+                <h2 style="color: #0ff; margin-bottom: 20px; text-shadow: 0 0 10px #0ff;">
+                    <i class="fas fa-network-wired"></i> NEURAL NETWORK VISUALIZATION
+                </h2>
+                
+                <div class="neural-viz">
+                    <canvas id="neuralCanvas"></canvas>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <h3 style="color: #0ff; margin-bottom: 15px;">NEURAL PARAMETERS</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                        <div>
+                            <div style="color: #0ff;">LEARNING RATE</div>
+                            <div class="cyber-progress">
+                                <div class="progress-fill" style="width: 75%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="color: #0ff;">HIDDEN LAYERS</div>
+                            <div class="monitor-value">12</div>
+                        </div>
+                        <div>
+                            <div style="color: #0ff;">ACCURACY</div>
+                            <div class="monitor-value">97.8%</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quantum Processor Section -->
+            <section id="quantum" class="content-section">
+                <h2 style="color: #0ff; margin-bottom: 20px; text-shadow: 0 0 10px #0ff;">
+                    <i class="fas fa-atom"></i> QUANTUM PROCESSOR SIMULATION
+                </h2>
+                
+                <div class="quantum-display">
+                    <!-- Quantum visualization will be rendered here -->
+                </div>
+
+                <div class="monitor-grid" style="margin-top: 30px;">
+                    <div class="monitor-card">
+                        <div>QUBITS</div>
+                        <div class="monitor-value">128</div>
+                        <div>Active Qubits</div>
+                    </div>
+                    <div class="monitor-card">
+                        <div>ENTANGLEMENT</div>
+                        <div class="monitor-value">94%</div>
+                        <div>Quantum State</div>
+                    </div>
+                    <div class="monitor-card">
+                        <div>COHERENCE</div>
+                        <div class="monitor-value">99.8%</div>
+                        <div>Stability</div>
+                    </div>
+                    <div class="monitor-card">
+                        <div>TEMPERATURE</div>
+                        <div class="monitor-value">15mK</div>
+                        <div>Operating Temp</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI Simulation Section -->
+            <section id="simulation" class="content-section">
+                <h2 style="color: #0ff; margin-bottom: 20px; text-shadow: 0 0 10px #0ff;">
+                    <i class="fas fa-brain"></i> AI SIMULATION ENGINE
+                </h2>
+                
+                <div class="simulation-window" id="simulationCanvas">
+                    <!-- Simulation will be rendered here -->
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <div class="camera-controls">
+                        <button class="control-btn" onclick="startSimulation('neural')">
+                            <i class="fas fa-play"></i> NEURAL TRAINING
+                        </button>
+                        <button class="control-btn" onclick="startSimulation('genetic')">
+                            <i class="fas fa-dna"></i> GENETIC ALGORITHM
+                        </button>
+                        <button class="control-btn" onclick="startSimulation('quantum')">
+                            <i class="fas fa-atom"></i> QUANTUM EVOLUTION
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Add more sections as needed -->
+        </main>
+
+        <!-- Right Monitor Panel -->
+        <aside class="monitor-panel">
+            <h3 style="color: #0ff; margin-bottom: 20px; text-shadow: 0 0 10px #0ff;">
+                <i class="fas fa-desktop"></i> SYSTEM MONITOR
+            </h3>
+
+            <div class="monitor-grid">
+                <div class="monitor-card">
+                    <div>CPU USAGE</div>
+                    <div class="monitor-value" id="cpuUsage">42%</div>
+                    <div>Processor Load</div>
+                </div>
+                <div class="monitor-card">
+                    <div>MEMORY</div>
+                    <div class="monitor-value" id="memoryUsage">68%</div>
+                    <div>16GB Total</div>
+                </div>
+                <div class="monitor-card">
+                    <div>NETWORK</div>
+                    <div class="monitor-value" id="networkSpeed">1.2Gbps</div>
+                    <div>Transfer Rate</div>
+                </div>
+                <div class="monitor-card">
+                    <div>STORAGE</div>
+                    <div class="monitor-value" id="storageUsage">78%</div>
+                    <div>2TB Total</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h4 style="color: #0ff; margin-bottom: 15px;">LIVE THREATS</h4>
+                <div class="console-output" id="threatMonitor" style="height: 120px;">
+                    <!-- Threat logs appear here -->
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h4 style="color: #0ff; margin-bottom: 15px;">ACTIVE CONNECTIONS</h4>
+                <div id="connectionsList" style="color: #0ff; font-size: 0.9em;">
+                    <div>192.168.1.100 - SECURE</div>
+                    <div>192.168.1.101 - WARNING</div>
+                    <div>192.168.1.102 - SECURE</div>
+                    <div>192.168.1.103 - DANGER</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Footer -->
+        <footer class="cyber-footer">
+            <div style="color: #0ff; font-family: 'Courier New', monospace;">
+                <span id="systemStatus">SYSTEM: OPERATIONAL</span>
+                <span style="margin: 0 20px;">|</span>
+                <span id="aiStatus">AI: LEARNING</span>
+                <span style="margin: 0 20px;">|</span>
+                <span id="securityStatus">SECURITY: ACTIVE</span>
+            </div>
+            
+            <div class="system-controls">
+                <button class="control-btn" onclick="emergencyLockdown()">
+                    <i class="fas fa-lock"></i> LOCKDOWN
+                </button>
+                <button class="control-btn" onclick="systemReboot()">
+                    <i class="fas fa-redo"></i> REBOOT
+                </button>
+                <button class="control-btn danger" onclick="shutdownSystem()">
+                    <i class="fas fa-power-off"></i> SHUTDOWN
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // ============================================
+        // QUANTUM AI MOVIE-STYLE HACKING PLATFORM
+        // ============================================
+
+        // Global State
+        let state = {
+            camera: {
+                active: false,
+                stream: null,
+                facingMode: 'user',
+                model: null,
+                detectionInterval: null
+            },
+            hacking: {
+                active: false,
+                target: '192.168.1.100',
+                attacks: []
+            },
+            simulation: {
+                active: false,
+                type: 'neural',
+                interval: null
+            },
+            system: {
+                autoMode: true,
+                threatLevel: 'medium',
+                metrics: {
+                    cpu: 42,
+                    memory: 68,
+                    network: 1.2,
+                    storage: 78,
+                    quantum: 5.2
+                }
+            }
+        };
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize Matrix Rain
+            initMatrixRain();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Initialize TensorFlow model
+            await initAIModel();
+            
+            // Start system monitoring
+            startSystemMonitoring();
+            
+            // Start auto simulations
+            if (state.system.autoMode) {
+                startAutoSimulations();
+            }
+            
+            // Initialize console with startup sequence
+            initStartupSequence();
+            
+            // Start real-time clock
+            updateClock();
+            setInterval(updateClock, 1000);
+        });
+
+        // ============================================
+        // MATRIX RAIN BACKGROUND
+        // ============================================
+        function initMatrixRain() {
+            const canvas = document.getElementById('matrixRain');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas to full screen
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Matrix characters
+            const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
+            const fontSize = 14;
+            const columns = Math.floor(canvas.width / fontSize);
+            const drops = [];
+            
+            // Initialize drops
+            for (let i = 0; i < columns; i++) {
+                drops[i] = Math.floor(Math.random() * canvas.height / fontSize);
+            }
+            
+            // Animation function
+            function drawMatrix() {
+                // Semi-transparent black background for trail effect
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Green text for matrix effect
+                ctx.fillStyle = '#0f0';
+                ctx.font = `${fontSize}px monospace`;
+                
+                for (let i = 0; i < drops.length; i++) {
+                    // Random character
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    
+                    // Draw character
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    
+                    // Reset drop if it reaches bottom
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    
+                    // Move drop down
+                    drops[i]++;
+                }
+            }
+            
+            // Animation loop
+            setInterval(drawMatrix, 50);
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+
+        // ============================================
+        // EVENT LISTENERS SETUP
+        // ============================================
+        function setupEventListeners() {
+            // Navigation buttons
+            document.querySelectorAll('.cyber-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    document.querySelectorAll('.cyber-btn').forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    // Show corresponding section
+                    const sectionId = this.getAttribute('data-section');
+                    showSection(sectionId);
+                });
+            });
+
+            // Camera controls
+            document.getElementById('startCamera').addEventListener('click', startCamera);
+            document.getElementById('stopCamera').addEventListener('click', stopCamera);
+            document.getElementById('captureImage').addEventListener('click', captureImage);
+            document.getElementById('toggleCamera').addEventListener('click', toggleCamera);
+
+            // Auto mode toggle
+            document.getElementById('autoMode').addEventListener('change', function() {
+                state.system.autoMode = this.checked;
+                if (this.checked) {
+                    startAutoSimulations();
+                    logToConsole('Auto mode: ENABLED', 'success');
+                } else {
+                    stopAutoSimulations();
+                    logToConsole('Auto mode: DISABLED', 'warning');
+                }
+            });
+
+            // Emergency buttons
+            window.emergencyLockdown = emergencyLockdown;
+            window.systemReboot = systemReboot;
+            window.shutdownSystem = shutdownSystem;
+
+            // Hacking modules
+            window.initiateHack = initiateHack;
+            window.setTarget = setTarget;
+        }
+
+        // ============================================
+        // SECTION NAVIGATION
+        // ============================================
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+                
+                // Special handling for certain sections
+                switch(sectionId) {
+                    case 'camera':
+                        if (!state.camera.active) {
+                            showCameraPlaceholder();
+                        }
+                        break;
+                    case 'hacking':
+                        startHackingSimulation();
+                        break;
+                    case 'simulation':
+                        startSimulation('neural');
+                        break;
+                }
+            }
+            
+            logToConsole(`Switched to: ${sectionId.toUpperCase()}`, 'command');
+        }
+
+        // ============================================
+        // OBJECT DETECTION SYSTEM
+        // ============================================
+        async function initAIModel() {
+            try {
+                logToConsole('Loading Quantum Vision Model...', 'command');
+                state.camera.model = await cocoSsd.load();
+                logToConsole('Neural model loaded successfully', 'success');
+            } catch (error) {
+                logToConsole('Failed to load vision model', 'error');
+                console.error('Model loading error:', error);
+            }
+        }
+
+        async function startCamera() {
+            try {
+                const video = document.getElementById('videoFeed');
+                const placeholder = document.getElementById('cameraPlaceholder');
+                
+                // Get camera stream
+                state.camera.stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: state.camera.facingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                
+                video.srcObject = state.camera.stream;
+                placeholder.style.display = 'none';
+                
+                // Update controls
+                state.camera.active = true;
+                document.getElementById('startCamera').disabled = true;
+                document.getElementById('stopCamera').disabled = false;
+                document.getElementById('captureImage').disabled = false;
+                
+                logToConsole('Quantum vision: ACTIVATED', 'success');
+                
+                // Start object detection
+                startObjectDetection();
+                
+            } catch (error) {
+                logToConsole('Camera access denied', 'error');
+                console.error('Camera error:', error);
+                
+                // Fallback to simulation
+                simulateCameraDetection();
+            }
+        }
+
+        function stopCamera() {
+            if (state.camera.stream) {
+                state.camera.stream.getTracks().forEach(track => track.stop());
+                state.camera.stream = null;
+            }
+            
+            state.camera.active = false;
+            document.getElementById('startCamera').disabled = false;
+            document.getElementById('stopCamera').disabled = true;
+            document.getElementById('captureImage').disabled = true;
+            
+            const video = document.getElementById('videoFeed');
+            video.srcObject = null;
+            
+            // Show placeholder
+            const placeholder = document.getElementById('cameraPlaceholder');
+            placeholder.style.display = 'block';
+            placeholder.innerHTML = `
+                <div style="font-size: 4em; margin-bottom: 20px;">
+                    <i class="fas fa-camera-slash"></i>
+                </div>
+                <div style="font-size: 1.5em; margin-bottom: 10px;">CAMERA OFFLINE</div>
+                <div>Click "ACTIVATE CAMERA" to begin</div>
+            `;
+            
+            // Clear overlay
+            document.getElementById('cameraOverlay').innerHTML = '';
+            document.getElementById('objectGrid').innerHTML = '';
+            
+            // Clear detection interval
+            if (state.camera.detectionInterval) {
+                clearInterval(state.camera.detectionInterval);
+            }
+            
+            logToConsole('Quantum vision: DEACTIVATED', 'warning');
+        }
+
+        function toggleCamera() {
+            state.camera.facingMode = state.camera.facingMode === 'user' ? 'environment' : 'user';
+            if (state.camera.active) {
+                stopCamera();
+                setTimeout(startCamera, 500);
+            }
+            logToConsole(`Switched to ${state.camera.facingMode === 'user' ? 'front' : 'rear'} camera`, 'command');
+        }
+
+        async function startObjectDetection() {
+            const video = document.getElementById('videoFeed');
+            const overlay = document.getElementById('cameraOverlay');
+            const objectGrid = document.getElementById('objectGrid');
+            
+            state.camera.detectionInterval = setInterval(async () => {
+                if (!state.camera.active || !state.camera.model) return;
+                
+                try {
+                    // Detect objects
+                    const predictions = await state.camera.model.detect(video);
+                    
+                    // Clear previous detections
+                    overlay.innerHTML = '';
+                    objectGrid.innerHTML = '';
+                    
+                    // Process predictions
+                    predictions.forEach(prediction => {
+                        const color = getColorForClass(prediction.class);
+                        
+                        // Draw detection box
+                        const box = document.createElement('div');
+                        box.className = 'detection-box';
+                        box.style.left = `${prediction.bbox[0]}px`;
+                        box.style.top = `${prediction.bbox[1]}px`;
+                        box.style.width = `${prediction.bbox[2]}px`;
+                        box.style.height = `${prediction.bbox[3]}px`;
+                        box.style.borderColor = color;
+                        box.style.color = color;
+                        box.innerHTML = `
+                            <div style="font-weight: bold;">${prediction.class}</div>
+                            <div>${Math.round(prediction.score * 100)}%</div>
+                        `;
+                        overlay.appendChild(box);
+                        
+                        // Add to object grid
+                        const objectCard = document.createElement('div');
+                        objectCard.className = 'monitor-card';
+                        objectCard.innerHTML = `
+                            <div style="color: ${color}; font-weight: bold;">${prediction.class}</div>
+                            <div class="monitor-value">${Math.round(prediction.score * 100)}%</div>
+                            <div>Confidence</div>
+                        `;
+                        objectGrid.appendChild(objectCard);
+                    });
+                    
+                } catch (error) {
+                    console.error('Detection error:', error);
+                }
+            }, 200); // 5 FPS for performance
+        }
+
+        function simulateCameraDetection() {
+            const objectGrid = document.getElementById('objectGrid');
+            const objects = [
+                { class: 'person', confidence: 92, color: '#0ff' },
+                { class: 'laptop', confidence: 87, color: '#f0f' },
+                { class: 'cell phone', confidence: 78, color: '#0f0' },
+                { class: 'bottle', confidence: 65, color: '#ff0' },
+                { class: 'book', confidence: 72, color: '#0af' },
+                { class: 'chair', confidence: 83, color: '#f0a' }
+            ];
+            
+            objectGrid.innerHTML = '';
+            objects.forEach(obj => {
+                const objectCard = document.createElement('div');
+                objectCard.className = 'monitor-card';
+                objectCard.innerHTML = `
+                    <div style="color: ${obj.color}; font-weight: bold;">${obj.class}</div>
+                    <div class="monitor-value">${obj.confidence}%</div>
+                    <div>Confidence</div>
+                `;
+                objectGrid.appendChild(objectCard);
+            });
+            
+            logToConsole('SIMULATION MODE: Using sample data', 'warning');
+        }
+
+        function captureImage() {
+            if (!state.camera.active) return;
+            
+            const video = document.getElementById('videoFeed');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            
+            // Add timestamp
+            ctx.fillStyle = '#0ff';
+            ctx.font = '20px monospace';
+            ctx.fillText(`CAPTURED: ${new Date().toLocaleTimeString()}`, 10, 30);
+            
+            // Save to downloads
+            const link = document.createElement('a');
+            link.download = `cyber-capture-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            logToConsole('Image captured and saved', 'success');
+            
+            // Flash effect
+            document.querySelector('.camera-interface').style.boxShadow = '0 0 50px #0ff';
+            setTimeout(() => {
+                document.querySelector('.camera-interface').style.boxShadow = '';
+            }, 500);
+        }
+
+        // ============================================
+        // HACKING SIMULATION
+        // ============================================
+        function startHackingSimulation() {
+            // Start automatic hacking events
+            setInterval(() => {
+                if (Math.random() < 0.3) { // 30% chance every 5 seconds
+                    simulateHackingEvent();
+                }
+            }, 5000);
+        }
+
+        function initiateHack(type) {
+            const hackConsole = document.getElementById('hackConsole');
+            const attacks = {
+                portScan: {
+                    name: 'PORT SCANNER',
+                    steps: [
+                        'Scanning network range...',
+                        'Found 24 active hosts',
+                        'Analyzing open ports...',
+                        'Port 22 (SSH) - OPEN',
+                        'Port 80 (HTTP) - OPEN',
+                        'Port 443 (HTTPS) - OPEN',
+                        'Port 3389 (RDP) - OPEN',
+                        'VULNERABILITY DETECTED: Port 3389 vulnerable to BlueKeep',
+                        'SCAN COMPLETE'
+                    ]
+                },
+                vulnerability: {
+                    name: 'VULNERABILITY SCAN',
+                    steps: [
+                        'Scanning target system...',
+                        'Checking for known vulnerabilities...',
+                        'CVE-2021-44228 (Log4Shell) - DETECTED',
+                        'CVE-2021-34527 (PrintNightmare) - DETECTED',
+                        'CVE-2022-22965 (Spring4Shell) - DETECTED',
+                        'Total vulnerabilities found: 3 CRITICAL',
+                        'Generating exploit payload...',
+                        'PAYLOAD READY'
+                    ]
+                },
+                bruteForce: {
+                    name: 'BRUTE FORCE ATTACK',
+                    steps: [
+                        'Loading password dictionary...',
+                        'Attempt 1/1000: password123 - FAILED',
+                        'Attempt 2/1000: admin - FAILED',
+                        'Attempt 3/1000: 123456 - FAILED',
+                        'Attempt 42/1000: Quantum@2024 - SUCCESS!',
+                        'CREDENTIALS COMPROMISED',
+                        'Admin access granted'
+                    ]
+                },
+                ddos: {
+                    name: 'DDoS ATTACK',
+                    steps: [
+                        'Initializing botnet...',
+                        '1500 bots connected',
+                        'Flooding target with packets...',
+                        'Bandwidth consumption: 2.3Gbps',
+                        'Target response time: 12.5s',
+                        'Target server overwhelmed',
+                        'DDoS SUCCESSFUL'
+                    ]
+                },
+                sqlInjection: {
+                    name: 'SQL INJECTION',
+                    steps: [
+                        'Analyzing database structure...',
+                        'Injecting malicious SQL...',
+                        "' OR '1'='1' --",
+                        "'; DROP TABLE users; --",
+                        'Bypassing authentication...',
+                        'Database accessed successfully',
+                        'Extracting user data...',
+                        '428 records compromised'
+                    ]
+                },
+                phishing: {
+                    name: 'PHISHING SIMULATION',
+                    steps: [
+                        'Creating fake login page...',
+                        'Sending phishing emails...',
+                        'Target clicked the link',
+                        'Credentials entered',
+                        'Credentials captured: admin@target.com',
+                        'SESSION HIJACKED',
+                        'Multi-factor authentication bypassed'
+                    ]
+                }
+            };
+            
+            const attack = attacks[type];
+            if (!attack) return;
+            
+            hackConsole.innerHTML = '';
+            logToHackConsole(`>>> INITIATING ${attack.name} <<<`, 'command');
+            
+            // Simulate attack steps
+            let delay = 0;
+            attack.steps.forEach((step, index) => {
+                setTimeout(() => {
+                    const type = step.includes('SUCCESS') || step.includes('COMPROMISED') ? 'success' :
+                                step.includes('FAILED') || step.includes('ERROR') ? 'error' :
+                                step.includes('DETECTED') || step.includes('VULNERABLE') ? 'warning' : 'command';
+                    logToHackConsole(step, type);
+                    
+                    // If last step, show success message
+                    if (index === attack.steps.length - 1) {
+                        setTimeout(() => {
+                            showAlert('SYSTEM BREACHED', `${attack.name} was successful! Target compromised.`);
+                        }, 1000);
+                    }
+                }, delay);
+                delay += 800 + Math.random() * 400;
+            });
+        }
+
+        function setTarget() {
+            const targetIp = document.getElementById('targetIp').value;
+            if (targetIp) {
+                state.hacking.target = targetIp;
+                logToHackConsole(`Target set to: ${targetIp}`, 'success');
+            }
+        }
+
+        function simulateHackingEvent() {
+            const events = [
+                { type: 'warning', message: 'Unauthorized access attempt detected from 192.168.1.105' },
+                { type: 'error', message: 'Firewall breach detected in sector 4' },
+                { type: 'success', message: 'Intrusion prevention system activated' },
+                { type: 'warning', message: 'Suspicious network activity from external IP' },
+                { type: 'error', message: 'Data exfiltration attempt blocked' }
+            ];
+            
+            const event = events[Math.floor(Math.random() * events.length)];
+            logToThreatMonitor(event.message, event.type);
+            
+            // Update threat level
+            updateThreatLevel();
+        }
+
+        // ============================================
+        // AI SIMULATION SYSTEM
+        // ============================================
+        function startSimulation(type) {
+            if (state.simulation.active) {
+                clearInterval(state.simulation.interval);
+            }
+            
+            state.simulation.active = true;
+            state.simulation.type = type;
+            
+            const canvas = document.getElementById('simulationCanvas');
+            canvas.innerHTML = '';
+            
+            // Create simulation visualization
+            const simulationDiv = document.createElement('div');
+            simulationDiv.style.width = '100%';
+            simulationDiv.style.height = '100%';
+            simulationDiv.style.position = 'relative';
+            simulationDiv.style.background = 'linear-gradient(45deg, #000, #001, #003)';
+            canvas.appendChild(simulationDiv);
+            
+            // Start simulation animation
+            state.simulation.interval = setInterval(() => {
+                updateSimulation(simulationDiv, type);
+            }, 100);
+            
+            logToConsole(`Started ${type.toUpperCase()} simulation`, 'command');
+        }
+
+        function updateSimulation(container, type) {
+            // Clear previous particles
+            container.innerHTML = '';
+            
+            // Create particles based on simulation type
+            const particleCount = type === 'quantum' ? 100 : type === 'neural' ? 50 : 30;
+            const colors = {
+                quantum: ['#0ff', '#f0f', '#0f0'],
+                neural: ['#0ff', '#00f', '#08f'],
+                genetic: ['#0f0', '#ff0', '#f00']
+            };
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.style.position = 'absolute';
+                particle.style.width = '4px';
+                particle.style.height = '4px';
+                particle.style.background = colors[type][Math.floor(Math.random() * colors[type].length)];
+                particle.style.borderRadius = '50%';
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.boxShadow = `0 0 10px currentColor`;
+                particle.style.animation = `pulse ${1 + Math.random() * 2}s infinite`;
+                
+                // Add movement
+                particle.velocity = {
+                    x: (Math.random() - 0.5) * 2,
+                    y: (Math.random() - 0.5) * 2
+                };
+                particle.update = function() {
+                    let x = parseFloat(this.style.left) + this.velocity.x;
+                    let y = parseFloat(this.style.top) + this.velocity.y;
+                    
+                    // Bounce off edges
+                    if (x < 0 || x > 100) this.velocity.x *= -1;
+                    if (y < 0 || y > 100) this.velocity.y *= -1;
+                    
+                    this.style.left = `${Math.max(0, Math.min(100, x))}%`;
+                    this.style.top = `${Math.max(0, Math.min(100, y))}%`;
+                };
+                
+                container.appendChild(particle);
+                particle.update();
+            }
+            
+            // Update particle positions
+            const particles = container.querySelectorAll('div');
+            particles.forEach(p => {
+                if (p.update) p.update();
+            });
+        }
+
+        // ============================================
+        // SYSTEM MONITORING
+        // ============================================
+        function startSystemMonitoring() {
+            // Update system metrics every 2 seconds
+            setInterval(() => {
+                // Randomize metrics slightly
+                state.system.metrics.cpu = Math.max(20, Math.min(90, 
+                    state.system.metrics.cpu + (Math.random() * 6 - 3)));
+                state.system.metrics.memory = Math.max(50, Math.min(85, 
+                    state.system.metrics.memory + (Math.random() * 4 - 2)));
+                state.system.metrics.network = (1 + Math.random() * 0.5).toFixed(1);
+                state.system.metrics.quantum = (5 + Math.random() * 1.5).toFixed(1);
+                
+                // Update displays
+                document.getElementById('cpuUsage').textContent = `${Math.round(state.system.metrics.cpu)}%`;
+                document.getElementById('memoryUsage').textContent = `${Math.round(state.system.metrics.memory)}%`;
+                document.getElementById('networkSpeed').textContent = `${state.system.metrics.network}Gbps`;
+                document.getElementById('quantumSpeed').textContent = `${state.system.metrics.quantum} TQ`;
+                
+                // Update progress bars
+                const dataProgress = document.getElementById('dataProgress');
+                const currentWidth = parseFloat(dataProgress.style.width);
+                const newWidth = Math.max(30, Math.min(90, currentWidth + (Math.random() * 10 - 5)));
+                dataProgress.style.width = `${newWidth}%`;
+                
+            }, 2000);
+        }
+
+        function updateThreatLevel() {
+            const levels = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+            const colors = ['#0f0', '#ff0', '#f80', '#f00'];
+            
+            const randomIndex = Math.min(levels.length - 1, 
+                Math.floor(Math.random() * (state.system.threatLevel === 'critical' ? 4 : 3)));
+            
+            state.system.threatLevel = levels[randomIndex].toLowerCase();
+            document.getElementById('threatLevel').textContent = levels[randomIndex];
+            document.getElementById('threatLevel').style.color = colors[randomIndex];
+            
+            // Update status dot
+            const statusDot = document.querySelector('.status-item:nth-child(2) .status-dot');
+            statusDot.className = 'status-dot';
+            if (randomIndex >= 2) statusDot.classList.add('warning');
+            if (randomIndex >= 3) statusDot.classList.add('danger');
+        }
+
+        // ============================================
+        // AUTO SIMULATIONS
+        // ============================================
+        function startAutoSimulations() {
+            // Random system events
+            setInterval(() => {
+                if (!state.system.autoMode) return;
+                
+                const events = [
+                    () => logToConsole('Neural network optimization complete', 'success'),
+                    () => logToConsole('Quantum entanglement stable at 99.8%', 'command'),
+                    () => logToConsole('New data patterns detected in sector 7', 'warning'),
+                    () => simulateHackingEvent(),
+                    () => {
+                        document.getElementById('aiAccuracy').textContent = 
+                            `${(97 + Math.random() * 1.5).toFixed(1)}%`;
+                    }
+                ];
+                
+                if (Math.random() < 0.4) { // 40% chance every 10 seconds
+                    const randomEvent = events[Math.floor(Math.random() * events.length)];
+                    randomEvent();
+                }
+            }, 10000);
+        }
+
+        function stopAutoSimulations() {
+            // Any cleanup needed
+        }
+
+        // ============================================
+        // CONSOLE LOGGING
+        // ============================================
+        function initStartupSequence() {
+            const startupMessages = [
+                'INITIALIZING QUANTUM CORE...',
+                'LOADING NEURAL NETWORKS...',
+                'SYNCHRONIZING DATA STREAMS...',
+                'ACTIVATING SECURITY PROTOCOLS...',
+                'ESTABLISHING QUANTUM ENTANGLEMENT...',
+                'SYSTEM STATUS: OPERATIONAL',
+                'WELCOME TO LOMASH QUANTUM AI'
+            ];
+            
+            let delay = 0;
+            startupMessages.forEach(msg => {
+                setTimeout(() => {
+                    const type = msg.includes('OPERATIONAL') || msg.includes('WELCOME') ? 'success' : 'command';
+                    logToConsole(msg, type);
+                }, delay);
+                delay += 800;
+            });
+        }
+
+        function logToConsole(message, type = 'command') {
+            const console = document.getElementById('dashboardConsole');
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            line.innerHTML = `<span class="console-${type}">${message}</span>`;
+            
+            console.appendChild(line);
+            console.scrollTop = console.scrollHeight;
+            
+            // Trigger animation
+            setTimeout(() => line.style.animation = 'typewriter 0.1s steps(40) forwards', 10);
+            
+            // Keep only last 20 lines
+            const lines = console.querySelectorAll('.console-line');
+            if (lines.length > 20) {
+                console.removeChild(lines[0]);
+            }
+        }
+
+        function logToHackConsole(message, type = 'command') {
+            const console = document.getElementById('hackConsole');
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            line.innerHTML = `<span class="console-${type}">${message}</span>`;
+            
+            console.appendChild(line);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function logToThreatMonitor(message, type = 'command') {
+            const monitor = document.getElementById('threatMonitor');
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            line.innerHTML = `<span class="console-${type}">${new Date().toLocaleTimeString()}: ${message}</span>`;
+            
+            monitor.appendChild(line);
+            monitor.scrollTop = monitor.scrollHeight;
+        }
+
+        // ============================================
+        // ALERT SYSTEM
+        // ============================================
+        function showAlert(title, message) {
+            const overlay = document.getElementById('alertOverlay');
+            const alertMessage = document.getElementById('alertMessage');
+            
+            alertMessage.textContent = message;
+            overlay.style.display = 'flex';
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                if (overlay.style.display === 'flex') {
+                    overlay.style.display = 'none';
+                }
+            }, 10000);
+        }
+
+        function handleAlert(action) {
+            const overlay = document.getElementById('alertOverlay');
+            overlay.style.display = 'none';
+            
+            switch(action) {
+                case 'neutralize':
+                    logToConsole('Threat neutralized successfully', 'success');
+                    break;
+                case 'lockdown':
+                    emergencyLockdown();
+                    break;
+            }
+        }
+
+        // ============================================
+        // EMERGENCY PROTOCOLS
+        // ============================================
+        function emergencyLockdown() {
+            logToConsole('!!! EMERGENCY LOCKDOWN INITIATED !!!', 'error');
+            logToConsole('All non-essential systems shutting down...', 'error');
+            logToConsole('Security protocols: MAXIMUM', 'error');
+            logToConsole('External connections: TERMINATED', 'error');
+            
+            // Visual effects
+            document.body.style.animation = 'alertPulse 0.5s infinite';
+            showAlert('SYSTEM LOCKDOWN', 'All security protocols activated. System isolated.');
+            
+            // Reset after 5 seconds
+            setTimeout(() => {
+                document.body.style.animation = '';
+                logToConsole('Lockdown sequence complete', 'success');
+            }, 5000);
+        }
+
+        function systemReboot() {
+            logToConsole('Initiating system reboot...', 'warning');
+            showAlert('SYSTEM REBOOT', 'All systems will restart momentarily.');
+            
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        }
+
+        function shutdownSystem() {
+            if (confirm('WARNING: This will shutdown all systems. Continue?')) {
+                logToConsole('!!! SYSTEM SHUTDOWN INITIATED !!!', 'error');
+                
+                // Fade out effect
+                document.body.style.transition = 'opacity 2s';
+                document.body.style.opacity = '0';
+                
+                setTimeout(() => {
+                    document.body.innerHTML = `
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; color: #f00; flex-direction: column;">
+                            <div style="font-size: 5em; margin-bottom: 30px; animation: pulse 1s infinite;">
+                                <i class="fas fa-power-off"></i>
+                            </div>
+                            <h1 style="font-size: 3em; text-shadow: 0 0 20px #f00;">SYSTEM OFFLINE</h1>
+                            <p style="margin-top: 20px; font-size: 1.5em;">Quantum core terminated</p>
+                        </div>
+                    `;
+                }, 2000);
+            }
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function getColorForClass(className) {
+            const colors = {
+                'person': '#0ff',
+                'laptop': '#f0f',
+                'cell phone': '#0f0',
+                'bottle': '#ff0',
+                'book': '#0af',
+                'car': '#f80',
+                'chair': '#8f0',
+                'keyboard': '#f0a',
+                'mouse': '#08f'
+            };
+            return colors[className] || '#fff';
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('timeDisplay').textContent = timeString;
+        }
+
+        // ============================================
+        // INITIALIZE ON LOAD
+        // ============================================
+        // Force start in auto mode
+        setTimeout(() => {
+            if (state.system.autoMode) {
+                logToConsole('Auto simulation mode: ACTIVATED', 'success');
+                startAutoSimulations();
+            }
+        }, 3000);
+
+        // Random alerts for movie effect
+        setInterval(() => {
+            if (Math.random() < 0.1) { // 10% chance every 30 seconds
+                const alerts = [
+                    'Unauthorized access attempt from external network',
+                    'Quantum coherence fluctuation detected',
+                    'Neural network experiencing high load',
+                    'Security firewall updated with new protocols',
+                    'Data stream encryption strengthened'
+                ];
+                logToConsole(alerts[Math.floor(Math.random() * alerts.length)], 'warning');
+            }
+        }, 30000);
+
+    </script>
+</body>
+</html>
