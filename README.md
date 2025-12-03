@@ -3,7 +3,6 @@
 ![Lomash Quantum AI](https://img.shields.io/badge/LOMASH-QUANTUM%20AI-00ffff?style=for-the-badge&logo=probot&logoColor=black)
 ![System Status](https://img.shields.io/badge/SYSTEM-ONLINE-00ff00?style=for-the-badge)
 ![Threat Level](https://img.shields.io/badge/THREAT%20LEVEL-LOW-ffff00?style=for-the-badge)
-[![Live Demo](https://img.shields.io/badge/LIVE-DEMO-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://lomashui.netlify.app/)
 
 A futuristic, high-tech "Quantum Cyber Command" dashboard interface designed with a cyberpunk aesthetic. This project features advanced UI elements, real-time visualizations, and simulated system monitoring tools.
 
