@@ -75,3 +75,5 @@ This project is open source and available under the [MIT License](LICENSE).
 <div align="center">
     <sub>Built with 💻 and ⚡ by Lomash Srivastava</sub>
 </div>
+
+Designed And Developed By Lomash Srivastava
