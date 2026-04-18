@@ -77,3 +77,12 @@ This project is open source and available under the [MIT License](LICENSE).
 </div>
 
 Designed And Developed By Lomash Srivastava
+
+
+![Stars](https://img.shields.io/github/stars/lomashsrivastava/=social)
+![Forks](https://img.shields.io/github/forks/lomashsrivastava/=social)
+
+
+## ?? Screenshots
+Add screenshots here (./screenshots folder)
+
